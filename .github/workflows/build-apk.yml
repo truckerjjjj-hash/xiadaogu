@@ -23,214 +23,577 @@ jobs:
         with:
           gradle-version: '8.7'
 
-      - name: Generate Clean Android Project and Build APK
+      - name: Generate Project and Build APK
         run: |
           python3 - << 'PYEOF'
           import os, shutil
+          b = "ResonanceBuild"
+          shutil.rmtree(b, ignore_errors=True)
+          def w(p, c):
+            f = os.path.join(b, p)
+            os.makedirs(os.path.dirname(f), exist_ok=True)
+            open(f, "w", encoding="utf-8").write(c.strip() + "\n")
 
-          base = "ResonanceBuild"
-          if os.path.exists(base):
-              shutil.rmtree(base)
-
-          files = {}
-
-          files["settings.gradle.kts"] = '''pluginManagement {
-              repositories {
-                  google()
-                  mavenCentral()
-                  gradlePluginPortal()
-              }
-          }
+          w("settings.gradle.kts", """
+          pluginManagement { repositories { google(); mavenCentral(); gradlePluginPortal() } }
           dependencyResolutionManagement {
-              repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
-              repositories {
-                  google()
-                  mavenCentral()
-              }
+            repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+            repositories { google(); mavenCentral() }
           }
           rootProject.name = "Resonance"
           include(":app")
-          '''
+          """)
 
-          files["gradle.properties"] = '''org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8
+          w("gradle.properties", """
+          org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8
           android.useAndroidX=true
           kotlin.code.style=official
           android.nonTransitiveRClass=true
-          '''
+          """)
 
-          files["build.gradle.kts"] = '''plugins {
-              id("com.android.application") version "8.5.2" apply false
-              id("org.jetbrains.kotlin.android") version "1.9.24" apply false
-              id("com.google.devtools.ksp") version "1.9.24-1.0.20" apply false
+          w("build.gradle.kts", """
+          plugins {
+            id("com.android.application") version "8.5.2" apply false
+            id("org.jetbrains.kotlin.android") version "1.9.24" apply false
+            id("com.google.devtools.ksp") version "1.9.24-1.0.20" apply false
           }
-          '''
+          """)
 
-          files["app/proguard-rules.pro"] = '''-keep class com.resonance.zhiji.data.db.** { *; }
-          -dontwarn kotlin.**
-          '''
-
-          files["app/build.gradle.kts"] = '''plugins {
-              id("com.android.application")
-              id("org.jetbrains.kotlin.android")
-              id("com.google.devtools.ksp")
+          w("app/build.gradle.kts", """
+          plugins {
+            id("com.android.application")
+            id("org.jetbrains.kotlin.android")
+            id("com.google.devtools.ksp")
           }
-
           android {
-              namespace = "com.resonance.zhiji"
-              compileSdk = 34
-
-              defaultConfig {
-                  applicationId = "com.resonance.zhiji"
-                  minSdk = 26
-                  targetSdk = 34
-                  versionCode = 200
-                  versionName = "2.0.0"
-              }
-
-              buildTypes {
-                  release {
-                      isMinifyEnabled = false
-                      proguardFiles(
-                          getDefaultProguardFile("proguard-android-optimize.txt"),
-                          "proguard-rules.pro"
-                      )
-                  }
-              }
-
-              compileOptions {
-                  sourceCompatibility = JavaVersion.VERSION_17
-                  targetCompatibility = JavaVersion.VERSION_17
-              }
-
-              kotlinOptions {
-                  jvmTarget = "17"
-              }
-
-              buildFeatures {
-                  compose = true
-              }
-
-              composeOptions {
-                  kotlinCompilerExtensionVersion = "1.5.14"
-              }
+            namespace = "com.resonance.zhiji"
+            compileSdk = 34
+            defaultConfig {
+              applicationId = "com.resonance.zhiji"
+              minSdk = 26
+              targetSdk = 34
+              versionCode = 200
+              versionName = "2.0.0"
+            }
+            compileOptions {
+              sourceCompatibility = JavaVersion.VERSION_17
+              targetCompatibility = JavaVersion.VERSION_17
+            }
+            kotlinOptions { jvmTarget = "17" }
+            buildFeatures { compose = true }
+            composeOptions { kotlinCompilerExtensionVersion = "1.5.14" }
           }
-
           dependencies {
-              val composeBom = platform("androidx.compose:compose-bom:2024.06.00")
-              implementation(composeBom)
-              implementation("androidx.core:core-ktx:1.13.1")
-              implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.3")
-              implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.3")
-              implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.3")
-              implementation("androidx.activity:activity-compose:1.9.0")
-              implementation("androidx.compose.ui:ui")
-              implementation("androidx.compose.ui:ui-graphics")
-              implementation("androidx.compose.ui:ui-tooling-preview")
-              implementation("androidx.compose.material3:material3")
-
-              val roomVersion = "2.6.1"
-              implementation("androidx.room:room-runtime:$roomVersion")
-              implementation("androidx.room:room-ktx:$roomVersion")
-              ksp("androidx.room:room-compiler:$roomVersion")
-
-              implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
+            val composeBom = platform("androidx.compose:compose-bom:2024.06.00")
+            implementation(composeBom)
+            implementation("androidx.core:core-ktx:1.13.1")
+            implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.3")
+            implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.3")
+            implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.3")
+            implementation("androidx.activity:activity-compose:1.9.0")
+            implementation("androidx.compose.ui:ui")
+            implementation("androidx.compose.material3:material3")
+            val roomVersion = "2.6.1"
+            implementation("androidx.room:room-runtime:$roomVersion")
+            implementation("androidx.room:room-ktx:$roomVersion")
+            ksp("androidx.room:room-compiler:$roomVersion")
+            implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
           }
-          '''
+          """)
 
-          files["app/src/main/AndroidManifest.xml"] = '''<?xml version="1.0" encoding="utf-8"?>
+          w("app/src/main/AndroidManifest.xml", """
+          <?xml version="1.0" encoding="utf-8"?>
           <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-
-              <uses-permission android:name="android.permission.INTERNET" />
-              <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-              <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
-              <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
-              <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
-
-              <application
-                  android:allowBackup="false"
-                  android:icon="@android:drawable/sym_def_app_icon"
-                  android:roundIcon="@android:drawable/sym_def_app_icon"
-                  android:label="知己 Resonance"
-                  android:supportsRtl="true"
-                  android:theme="@android:style/Theme.Material.Light.NoActionBar">
-
-                  <activity
-                      android:name=".MainActivity"
-                      android:exported="true"
-                      android:windowSoftInputMode="adjustResize">
-                      <intent-filter>
-                          <action android:name="android.intent.action.MAIN" />
-                          <category android:name="android.intent.category.LAUNCHER" />
-                      </intent-filter>
-                  </activity>
-
-                  <receiver
-                      android:name=".service.ReminderAlarmReceiver"
-                      android:exported="false" />
-              </application>
+            <uses-permission android:name="android.permission.INTERNET" />
+            <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+            <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+            <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+            <application
+              android:allowBackup="false"
+              android:icon="@android:drawable/sym_def_app_icon"
+              android:label="知己 Resonance"
+              android:supportsRtl="true"
+              android:theme="@android:style/Theme.Material.Light.NoActionBar">
+              <activity android:name=".MainActivity" android:exported="true" android:windowSoftInputMode="adjustResize">
+                <intent-filter>
+                  <action android:name="android.intent.action.MAIN" />
+                  <category android:name="android.intent.category.LAUNCHER" />
+                </intent-filter>
+              </activity>
+              <receiver android:name=".ReminderAlarmReceiver" android:exported="false" />
+            </application>
           </manifest>
-          '''
+          """)
 
-          files["app/src/main/java/com/resonance/zhiji/data/db/Entities.kt"] = '''package com.resonance.zhiji.data.db
+          w("app/src/main/java/com/resonance/zhiji/MainActivity.kt", """
+          @file:OptIn(ExperimentalMaterial3Api::class)
+          package com.resonance.zhiji
 
-          import androidx.room.Entity
-          import androidx.room.Index
-          import androidx.room.PrimaryKey
+          import android.app.*
+          import android.content.*
+          import android.os.*
+          import androidx.activity.ComponentActivity
+          import androidx.activity.compose.setContent
+          import androidx.compose.foundation.*
+          import androidx.compose.foundation.layout.*
+          import androidx.compose.foundation.lazy.*
+          import androidx.compose.foundation.shape.RoundedCornerShape
+          import androidx.compose.material.icons.Icons
+          import androidx.compose.material.icons.filled.*
+          import androidx.compose.material3.*
+          import androidx.compose.runtime.*
+          import androidx.compose.ui.*
+          import androidx.compose.ui.graphics.Color
+          import androidx.compose.ui.text.font.FontWeight
+          import androidx.compose.ui.text.style.TextAlign
+          import androidx.compose.ui.unit.*
+          import androidx.core.app.NotificationCompat
+          import androidx.lifecycle.*
+          import androidx.lifecycle.viewmodel.compose.viewModel
+          import androidx.room.*
+          import kotlinx.coroutines.flow.*
+          import kotlinx.coroutines.launch
           import java.util.UUID
 
-          @Entity(tableName = "chat_sessions")
-          data class ChatSessionEntity(
-              @PrimaryKey val id: String = UUID.randomUUID().toString(),
-              val title: String,
-              val providerProfileId: String? = null,
-              val createdAt: Long = System.currentTimeMillis(),
-              val updatedAt: Long = System.currentTimeMillis(),
-              val summaryText: String? = null,
-              val allowMemoryExtraction: Boolean = true
-          )
-
-          @Entity(tableName = "chat_messages", indices = [Index("sessionId"), Index("createdAt")])
-          data class ChatMessageEntity(
-              @PrimaryKey val id: String = UUID.randomUUID().toString(),
-              val sessionId: String,
-              val role: String,
-              val content: String,
-              val sequenceNumber: Int,
-              val createdAt: Long = System.currentTimeMillis(),
-              val tokenCount: Int = 0,
-              val referencedCardIdsJson: String = "[]"
-          )
-
-          @Entity(tableName = "cards", indices = [Index("contentType"), Index("createdAt"), Index("allowPostcardReview")])
+          @Entity(tableName = "cards")
           data class CardEntity(
-              @PrimaryKey val id: String = UUID.randomUUID().toString(),
-              val rawContent: String,
-              val title: String? = null,
-              val contentType: String = "LIFE",
-              val createdAt: Long = System.currentTimeMillis(),
-              val updatedAt: Long = System.currentTimeMillis(),
-              val sourceType: String = "DIRECT_INPUT",
-              val sourceSessionId: String? = null,
-              val sourceMessageIdsJson: String = "[]",
-              val aiSupplementContent: String? = null,
-              val tagsCsv: String = "随手记",
-              val interventionLevel: String = "L0",
-              val aiSuggestionPrompt: String? = null,
-              val allowPostcardReview: Boolean = true,
-              val allowAiAccess: Boolean = true,
-              val isSensitive: Boolean = false,
-              val importanceScore: Int = 3,
-              val lastReviewedAt: Long? = null
+            @PrimaryKey val id: String = UUID.randomUUID().toString(),
+            val title: String,
+            val rawContent: String,
+            val contentType: String = "LIFE",
+            val tagsCsv: String = "随手记",
+            val aiSupplement: String? = null,
+            val interventionLevel: String = "L0",
+            val aiSuggestion: String? = null,
+            val createdAt: Long = System.currentTimeMillis()
           )
 
-          @Entity(tableName = "card_drafts", indices = [Index("sessionId")])
+          @Entity(tableName = "chat_messages")
+          data class ChatMessageEntity(
+            @PrimaryKey val id: String = UUID.randomUUID().toString(),
+            val role: String,
+            val content: String,
+            val seq: Int,
+            val createdAt: Long = System.currentTimeMillis()
+          )
+
+          @Entity(tableName = "card_drafts")
           data class CardDraftEntity(
-              @PrimaryKey val id: String = UUID.randomUUID().toString(),
-              val sessionId: String,
-              val sourceMessageIdsJson: String,
-              val proposedTitle: String,
-              val proposedContent: String,
-              val draftMode: String,
-              val suggestedTagsCsv: String = "对话提炼",
-              val status: String = "PENDING",
-              val createdAt: Long = System.currentTimeMillis()
+            @PrimaryKey val id: String = UUID.randomUUID().toString(),
+            val proposedTitle: String,
+            val proposedContent: String,
+            val status: String = "PENDING"
+          )
+
+          @Entity(tableName = "memory_items")
+          data class MemoryItemEntity(
+            @PrimaryKey val id: String = UUID.randomUUID().toString(),
+            val category: String,
+            val content: String,
+            val originType: String = "USER_STATED",
+            val status: String = "ACTIVE",
+            val confidence: Int = 95,
+            val sourceSummary: String = "本地长期记忆"
+          )
+
+          @Entity(tableName = "tasks")
+          data class TaskEntity(
+            @PrimaryKey val id: String = UUID.randomUUID().toString(),
+            val title: String,
+            val timeLabel: String = "明天 08:30",
+            val intensity: String = "STRONG",
+            val isDraft: Boolean = false,
+            val status: String = "TODO",
+            val postponeCount: Int = 0
+          )
+
+          @Entity(tableName = "providers")
+          data class ProviderEntity(
+            @PrimaryKey val id: String,
+            val name: String,
+            val model: String,
+            val isActive: Boolean
+          )
+
+          @Dao
+          interface ResonanceDao {
+            @Query("SELECT * FROM cards ORDER BY createdAt DESC")
+            fun observeCards(): Flow<List<CardEntity>>
+            @Query("SELECT COUNT(*) FROM cards")
+            suspend fun cardCount(): Int
+            @Insert(onConflict = OnConflictStrategy.REPLACE)
+            suspend fun upsertCard(c: CardEntity)
+            @Query("SELECT * FROM chat_messages ORDER BY seq ASC")
+            fun observeMessages(): Flow<List<ChatMessageEntity>>
+            @Insert(onConflict = OnConflictStrategy.REPLACE)
+            suspend fun insertMessage(m: ChatMessageEntity)
+            @Query("SELECT * FROM card_drafts WHERE status = 'PENDING'")
+            fun observeDrafts(): Flow<List<CardDraftEntity>>
+            @Insert(onConflict = OnConflictStrategy.REPLACE)
+            suspend fun upsertDraft(d: CardDraftEntity)
+            @Query("SELECT * FROM memory_items")
+            fun observeMemories(): Flow<List<MemoryItemEntity>>
+            @Insert(onConflict = OnConflictStrategy.REPLACE)
+            suspend fun upsertMemory(m: MemoryItemEntity)
+            @Query("SELECT * FROM tasks ORDER BY isDraft DESC")
+            fun observeTasks(): Flow<List<TaskEntity>>
+            @Insert(onConflict = OnConflictStrategy.REPLACE)
+            suspend fun upsertTask(t: TaskEntity)
+            @Query("SELECT * FROM providers")
+            fun observeProviders(): Flow<List<ProviderEntity>>
+            @Query("UPDATE providers SET isActive = CASE WHEN id = :id THEN 1 ELSE 0 END")
+            suspend fun selectProvider(id: String)
+            @Insert(onConflict = OnConflictStrategy.REPLACE)
+            suspend fun upsertProvider(p: ProviderEntity)
+          }
+
+          @Database(
+            entities = [CardEntity::class, ChatMessageEntity::class, CardDraftEntity::class, MemoryItemEntity::class, TaskEntity::class, ProviderEntity::class],
+            version = 1,
+            exportSchema = false
+          )
+          abstract class AppDb : RoomDatabase() {
+            abstract fun dao(): ResonanceDao
+          }
+
+          class ReminderAlarmReceiver : BroadcastReceiver() {
+            override fun onReceive(context: Context, intent: Intent) {
+              val title = intent.getStringExtra("TITLE") ?: "知己行动提醒"
+              val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+              if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                nm.createNotificationChannel(NotificationChannel("res_ch", "知己强提醒", NotificationManager.IMPORTANCE_HIGH))
+              }
+              val n = NotificationCompat.Builder(context, "res_ch")
+                .setSmallIcon(android.R.drawable.ic_popup_reminder)
+                .setContentTitle("【知己强提醒】$title")
+                .setContentText("点击返回知己确认执行状态或调整计划")
+                .setAutoCancel(true).build()
+              nm.notify(title.hashCode(), n)
+            }
+          }
+
+          class ResonanceVM(app: Application) : AndroidViewModel(app) {
+            private val dao = Room.databaseBuilder(app, AppDb::class.java, "resonance_v2.db").fallbackToDestructiveMigration().build().dao()
+            val cards = dao.observeCards().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+            val messages = dao.observeMessages().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+            val drafts = dao.observeDrafts().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+            val memories = dao.observeMemories().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+            val tasks = dao.observeTasks().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+            val providers = dao.observeProviders().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+            init {
+              viewModelScope.launch {
+                if (dao.cardCount() == 0) {
+                  dao.upsertCard(CardEntity(title = "蛋炒饭晚餐", rawContent = "今晚吃了一个炒饭，很香很好吃。", contentType = "LIFE", tagsCsv = "美食日常", interventionLevel = "L0"))
+                  dao.upsertCard(CardEntity(title = "习惯养成与环境设计", rawContent = "微习惯的核心不是靠意志力硬撑，而是降低启动阻力。", contentType = "KNOWLEDGE", tagsCsv = "行为心理学,知识卡", aiSupplement = "关联概念：福格行为模型 B=MAP、环境摩擦力设计", interventionLevel = "L1", aiSuggestion = "已关联「注意力管理」知识卡片"))
+                  dao.upsertCard(CardEntity(title = "三个月前的灵感：独立记忆中枢", rawContent = "切换不同大模型时不应该丢失个人历史，应建立本地 SQLite 四层长期记忆架构。", contentType = "INSPIRATION", tagsCsv = "产品灵感,端侧架构", interventionLevel = "L1", aiSuggestion = "已收入灵感库，可随时继续探讨"))
+                  dao.insertMessage(ChatMessageEntity(role = "USER", content = "最近想学的新技术太多，晚上却静不下心。", seq = 1))
+                  dao.insertMessage(ChatMessageEntity(role = "ASSISTANT", content = "结合你之前的有效经验，晚间 21:00 后直接做高强度编码容易受阻，建议拆成 15 分钟的小切口。", seq = 2))
+                  dao.upsertMemory(MemoryItemEntity(category = "长期目标", content = "职业重心更新：优先深耕 Android 与端侧 AI 工程实践（历史版本已归档）", originType = "用户明确陈述", confidence = 98))
+                  dao.upsertMemory(MemoryItemEntity(category = "有效方法", content = "晚间任务拆分为 15-25 分钟微步骤时完成率最高", originType = "AI 归纳推测", confidence = 88))
+                  dao.upsertTask(TaskEntity(title = "阅读《福格行为模型》并整理知识卡", timeLabel = "今晚 20:30", isDraft = false))
+                  dao.upsertTask(TaskEntity(title = "明天起床复习 Room 与混合检索架构", timeLabel = "明天 08:30", isDraft = true))
+                  dao.upsertProvider(ProviderEntity("gemini", "Gemini 2.5 Pro (Adapter)", "gemini-2.5-pro", true))
+                  dao.upsertProvider(ProviderEntity("claude", "Claude 3.7 Sonnet (Adapter)", "claude-3-7-sonnet", false))
+                  dao.upsertProvider(ProviderEntity("local", "端侧离线模型 (llama.cpp)", "qwen2.5-3b-q4", false))
+                }
+              }
+            }
+
+            fun addCard(text: String) {
+              if (text.isBlank()) return
+              viewModelScope.launch {
+                val neg = listOf("不想", "不去", "算了", "不要", "要是能").any { text.contains(it) }
+                val act = !neg && listOf("明天", "今晚", "下周", "一定要", "计划", "学习", "复习").any { text.contains(it) }
+                val type = when {
+                  text.contains("灵感") || text.contains("点子") -> "INSPIRATION"
+                  text.contains("概念") || text.contains("原理") || text.contains("读书") -> "KNOWLEDGE"
+                  else -> "LIFE"
+                  }
+                dao.upsertCard(CardEntity(
+                  title = text.trim().take(16),
+                  rawContent = text.trim(),
+                  contentType = type,
+                  tagsCsv = if (act) "待规划,随手记" else "生活记录",
+                  interventionLevel = if (act || type != "LIFE") "L1" else "L0",
+                  aiSuggestion = if (act) "检测到行动意图，要不要帮你安排进计划草案？" else null
+                ))
+              }
+            }
+
+            fun sendChat(text: String, anchor: String?) {
+              if (text.isBlank()) return
+              viewModelScope.launch {
+                val next = (messages.value.maxOfOrNull { it.seq } ?: 0) + 1
+                val prov = providers.value.firstOrNull { it.isActive }?.name ?: "离线引擎"
+                dao.insertMessage(ChatMessageEntity(role = "USER", content = text.trim(), seq = next))
+                val prefix = if (anchor != null) "围绕旧卡片《$anchor》继续交流：" else ""
+                dao.insertMessage(ChatMessageEntity(
+                  role = "ASSISTANT",
+                  content = "${prefix}已通过统一适配层（$prov）按需检索 ${memories.value.count { it.status == "ACTIVE" }} 条授权长期记忆（Token 预算控制 220/2048）。如需留存本次观点，可点击下方提取为卡片草稿。",
+                  seq = next + 1
+                ))
+              }
+            }
+
+            fun extractDraft(msg: ChatMessageEntity) = viewModelScope.launch {
+              dao.upsertDraft(CardDraftEntity(proposedTitle = "对话精华：${msg.content.take(12)}...", proposedContent = msg.content))
+            }
+
+            fun confirmDraft(d: CardDraftEntity) = viewModelScope.launch {
+              dao.upsertDraft(d.copy(status = "SAVED"))
+              dao.upsertCard(CardEntity(title = d.proposedTitle, rawContent = d.proposedContent, contentType = "KNOWLEDGE", tagsCsv = "对话提炼"))
+            }
+
+            fun createTaskDraft(c: CardEntity) = viewModelScope.launch {
+              dao.upsertTask(TaskEntity(title = c.rawContent.take(24), isDraft = true))
+            }
+
+            fun confirmTask(t: TaskEntity) = viewModelScope.launch {
+              dao.upsertTask(t.copy(isDraft = false))
+            }
+
+            fun toggleTaskDone(t: TaskEntity) = viewModelScope.launch {
+              dao.upsertTask(t.copy(status = if (t.status == "DONE") "TODO" else "DONE"))
+            }
+
+            fun postponeTask(t: TaskEntity) = viewModelScope.launch {
+              dao.upsertTask(t.copy(postponeCount = t.postponeCount + 1))
+            }
+
+            fun toggleMemory(m: MemoryItemEntity) = viewModelScope.launch {
+              dao.upsertMemory(m.copy(status = if (m.status == "ACTIVE") "DISABLED" else "ACTIVE"))
+            }
+
+            fun selectProvider(id: String) = viewModelScope.launch { dao.selectProvider(id) }
+          }
+
+          class MainActivity : ComponentActivity() {
+            override fun onCreate(savedInstanceState: Bundle?) {
+              super.onCreate(savedInstanceState)
+              setContent {
+                MaterialTheme(colorScheme = lightColorScheme(primary = Color(0xFF2E5E4E), secondary = Color(0xFF8B6B4A), background = Color(0xFFF8F6F1), surface = Color.White)) {
+                  ResonanceApp()
+                }
+              }
+            }
+          }
+
+          @Composable
+          fun ResonanceApp(vm: ResonanceVM = viewModel()) {
+            var tab by remember { mutableIntStateOf(0) }
+            var showPostcard by remember { mutableStateOf(false) }
+            var hidePostcardEdge by remember { mutableStateOf(false) }
+            var anchorTitle by remember { mutableStateOf<String?>(null) }
+            var searchKw by remember { mutableStateOf("") }
+
+            val cards by vm.cards.collectAsState()
+            val messages by vm.messages.collectAsState()
+            val drafts by vm.drafts.collectAsState()
+            val memories by vm.memories.collectAsState()
+            val tasks by vm.tasks.collectAsState()
+            val providers by vm.providers.collectAsState()
+
+            Scaffold(
+              topBar = {
+                TopAppBar(title = {
+                  Column {
+                    Text("知己 Resonance V2.0", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                    Text("记忆独立 · 智能适度 · 离线优先 (${providers.firstOrNull { it.isActive }?.name ?: "本地模式"})", fontSize = 11.sp, color = Color.Gray)
+                  }
+                })
+              },
+              bottomBar = {
+                NavigationBar {
+                  NavigationBarItem(selected = tab == 0, onClick = { tab = 0 }, icon = { Icon(Icons.Default.Edit, null) }, label = { Text("卡片盒") })
+                  NavigationBarItem(selected = tab == 1, onClick = { tab = 1 }, icon = { Icon(Icons.Default.Email, null) }, label = { Text("知己聊天") })
+                  NavigationBarItem(selected = tab == 2, onClick = { tab = 2 }, icon = { Icon(Icons.Default.CheckCircle, null) }, label = { Text("行动闭环") })
+                  NavigationBarItem(selected = tab == 3, onClick = { tab = 3 }, icon = { Icon(Icons.Default.Star, null) }, label = { Text("记忆中枢") })
+                }
+              }
+            ) { pad ->
+              Box(Modifier.fillMaxSize().background(Color(0xFFF8F6F1)).padding(pad)) {
+                when (tab) {
+                  0 -> {
+                    var input by remember { mutableStateOf("") }
+                    val list = if (searchKw.isBlank()) cards else cards.filter { it.rawContent.contains(searchKw) || it.title.contains(searchKw) }
+                    Column(Modifier.fillMaxSize().padding(14.dp)) {
+                      OutlinedTextField(value = searchKw, onValueChange = { searchKw = it }, modifier = Modifier.fillMaxWidth(), leadingIcon = { Icon(Icons.Default.Search, null) }, placeholder = { Text("本地检索卡片、标签或知识...") }, singleLine = true)
+                      Spacer(Modifier.height(8.dp))
+                      OutlinedTextField(value = input, onValueChange = { input = it }, modifier = Modifier.fillMaxWidth(), placeholder = { Text("随手记录（L0 默认安静保存，支持行动意图识别）...") }, trailingIcon = {
+                        IconButton(onClick = { vm.addCard(input); input = "" }) { Icon(Icons.Default.Send, null) }
+                      })
+                      Spacer(Modifier.height(10.dp))
+                      LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        items(list, key = { it.id }) { c ->
+                          Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+                            Column(Modifier.padding(14.dp)) {
+                              Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
+                                Text(c.title, fontWeight = FontWeight.Bold, fontSize = 15.sp, modifier = Modifier.weight(1f))
+                                AssistChip(onClick = {}, label = { Text("${c.contentType} · ${c.interventionLevel}", fontSize = 11.sp) })
+                              }
+                              Spacer(Modifier.height(4.dp))
+                              Text(c.rawContent, fontSize = 14.sp)
+                              Text("标签：${c.tagsCsv}", fontSize = 12.sp, color = Color(0xFF8B6B4A))
+                              c.aiSupplement?.let { Text(it, fontSize = 12.sp, color = Color(0xFF2E5E4E), modifier = Modifier.padding(top = 4.dp)) }
+                              c.aiSuggestion?.let { sug ->
+                                Row(Modifier.fillMaxWidth().padding(top = 6.dp).background(Color(0xFFEEF4F1), RoundedCornerShape(8.dp)).padding(8.dp), Arrangement.SpaceBetween, Alignment.CenterVertically) {
+                                  Text(sug, fontSize = 12.sp, modifier = Modifier.weight(1f))
+                                  TextButton(onClick = { vm.createTaskDraft(c); tab = 2 }) { Text("生成计划草案", fontSize = 12.sp) }
+                                }
+                              }
+                              Row(Modifier.fillMaxWidth(), Arrangement.End) {
+                                TextButton(onClick = { anchorTitle = c.title; tab = 1 }) { Text("继续聊聊", fontSize = 12.sp) }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                  1 -> {
+                    var msgIn by remember { mutableStateOf("") }
+                    Column(Modifier.fillMaxSize().padding(14.dp)) {
+                      anchorTitle?.let { t ->
+                        Surface(color = Color(0xFFEEF4F1), shape = RoundedCornerShape(8.dp), modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
+                          Row(Modifier.padding(8.dp), Arrangement.SpaceBetween, Alignment.CenterVertically) {
+                            Text("关联旧卡片：《$t》", fontSize = 12.sp, color = Color(0xFF2E5E4E))
+                            TextButton(onClick = { anchorTitle = null }) { Text("清除", fontSize = 12.sp) }
+                          }
+                        }
+                      }
+                      drafts.forEach { d ->
+                        Card(Modifier.fillMaxWidth().padding(bottom = 8.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF8E7))) {
+                          Row(Modifier.padding(10.dp).fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
+                            Column(Modifier.weight(1f)) {
+                              Text("待确认卡片草稿：${d.proposedTitle}", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                              Text(d.proposedContent, fontSize = 12.sp, maxLines = 1)
+                            }
+                            Button(onClick = { vm.confirmDraft(d) }) { Text("存入卡片盒", fontSize = 12.sp) }
+                          }
+                        }
+                      }
+                      LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        items(messages, key = { it.id }) { m ->
+                          val isUser = m.role == "USER"
+                          Surface(color = if (isUser) Color(0xFF2E5E4E) else Color.White, shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth()) {
+                            Column(Modifier.padding(12.dp)) {
+                              Text(m.content, color = if (isUser) Color.White else Color.Black, fontSize = 14.sp)
+                              if (!isUser) {
+                                Row(Modifier.fillMaxWidth(), Arrangement.End) {
+                                  TextButton(onClick = { vm.extractDraft(m) }) { Text("提炼为卡片草稿", fontSize = 12.sp) }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                      OutlinedTextField(value = msgIn, onValueChange = { msgIn = it }, modifier = Modifier.fillMaxWidth(), placeholder = { Text("独立自由交流（不强制建卡）...") }, trailingIcon = {
+                        IconButton(onClick = { vm.sendChat(msgIn, anchorTitle); msgIn = "" }) { Icon(Icons.Default.Send, null) }
+                      })
+                    }
+                  }
+                  2 -> {
+                    LazyColumn(Modifier.fillMaxSize().padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                      items(tasks, key = { it.id }) { t ->
+                        Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = if (t.isDraft) Color(0xFFFFF8E7) else Color.White)) {
+                          Column(Modifier.padding(14.dp)) {
+                            Text(if (t.isDraft) "【待确认计划草案】${t.title}" else t.title, fontWeight = FontWeight.Bold)
+                            Text("时间：${t.timeLabel} · 提醒强度：${t.intensity} · 状态：${t.status}", fontSize = 12.sp, color = Color.Gray)
+                            if (t.postponeCount > 0) Text("已推迟 ${t.postponeCount} 次：建议拆分为 10 分钟微步骤", fontSize = 12.sp, color = Color(0xFF8B6B4A))
+                            Row(Modifier.fillMaxWidth().padding(top = 6.dp), Arrangement.End) {
+                              if (t.isDraft) {
+                                Button(onClick = { vm.confirmTask(t) }) { Text("确认创建并启用强提醒") }
+                              } else {
+                                OutlinedButton(onClick = { vm.postponeTask(t) }) { Text("推迟") }
+                                Spacer(Modifier.width(8.dp))
+                                Button(onClick = { vm.toggleTaskDone(t) }) { Text(if (t.status == "DONE") "已完成" else "标记完成") }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                  3 -> {
+                    LazyColumn(Modifier.fillMaxSize().padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                      item { Text("统一 Provider 适配层（切换模型不丢失本地记忆）", fontWeight = FontWeight.Bold) }
+                      items(providers, key = { it.id }) { p ->
+                        Card(Modifier.fillMaxWidth().clickable { vm.selectProvider(p.id) }, colors = CardDefaults.cardColors(containerColor = if (p.isActive) Color(0xFFEEF4F1) else Color.White)) {
+                          Row(Modifier.padding(12.dp).fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
+                            Column {
+                              Text(p.name, fontWeight = FontWeight.SemiBold)
+                              Text(p.model, fontSize = 12.sp, color = Color.Gray)
+                            }
+                            FilterChip(selected = p.isActive, onClick = { vm.selectProvider(p.id) }, label = { Text(if (p.isActive) "已启用" else "切换") })
+                          }
+                        }
+                      }
+                      item { Spacer(Modifier.height(6.dp)); Text("四层长期记忆中枢（支持来源追溯与手动停用）", fontWeight = FontWeight.Bold) }
+                      items(memories, key = { it.id }) { m ->
+                        Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+                          Column(Modifier.padding(14.dp)) {
+                            Text("${m.category} · ${m.originType} · 置信度 ${m.confidence}%", fontSize = 12.sp, color = Color(0xFF2E5E4E))
+                            Spacer(Modifier.height(4.dp))
+                            Text(m.content, fontSize = 14.sp)
+                            Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
+                              Text("状态：${m.status}", fontSize = 11.sp, color = Color.Gray)
+                              TextButton(onClick = { vm.toggleMemory(m) }) { Text(if (m.status == "ACTIVE") "停用" else "启用") }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+
+                if (!hidePostcardEdge) {
+                  Surface(
+                    modifier = Modifier.align(Alignment.CenterEnd).clickable { showPostcard = true },
+                    shape = RoundedCornerShape(topStart = 16.dp, bottomStart = 16.dp),
+                    color = Color(0xFF8B6B4A),
+                    shadowElevation = 6.dp
+                  ) {
+                    Column(Modifier.padding(horizontal = 10.dp, vertical = 12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                      Icon(Icons.Default.Notifications, null, tint = Color.White)
+                      Text("旧日\n明信片", color = Color.White, fontSize = 11.sp, textAlign = TextAlign.Center)
+                    }
+                  }
+                }
+
+                if (showPostcard) {
+                  val oldCard = cards.lastOrNull()
+                  AlertDialog(
+                    onDismissRequest = { showPostcard = false },
+                    title = { Text("寄自过去的回忆明信片") },
+                    text = {
+                      Column {
+                        Text(oldCard?.title ?: "三个月前的灵感：独立记忆中枢", fontWeight = FontWeight.Bold)
+                        Spacer(Modifier.height(6.dp))
+                        Text(oldCard?.rawContent ?: "切换不同大模型时不应该丢失个人历史，应建立本地 SQLite 四层长期记忆架构。")
+                        Spacer(Modifier.height(8.dp))
+                        Text("推荐原因：长期未完结灵感，与近期思考高度呼应", fontSize = 12.sp, color = Color.Gray)
+                      }
+                    },
+                    confirmButton = {
+                      Button(onClick = { showPostcard = false; anchorTitle = oldCard?.title ?: "独立记忆中枢"; tab = 1 }) { Text("继续聊聊") }
+                    },
+                    dismissButton = {
+                      TextButton(onClick = { showPostcard = false; hidePostcardEdge = true }) { Text("本次收起") }
+                    }
+                  )
+                }
+              }
+            }
+          }
+          """)
+          PYEOF
+          cd ResonanceBuild
+          gradle assembleDebug --no-daemon --stacktrace
+
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Resonance-v2.0-debug-apk
+          path: ResonanceBuild/app/build/outputs/apk/debug/app-debug.apk
+# === END OF FILE ===
