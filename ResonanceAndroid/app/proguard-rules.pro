@@ -1,0 +1,2 @@
+-keep class com.resonance.zhiji.data.db.** { *; }
+-dontwarn kotlin.**
