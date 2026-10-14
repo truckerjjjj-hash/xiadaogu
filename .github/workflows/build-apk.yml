@@ -23,11 +23,18 @@ jobs:
         with:
           gradle-version: '8.7'
 
-      - name: Fix Settings and Build Debug APK
-        working-directory: ResonanceAndroid
+      - name: Generate Clean Android Project and Build APK
         run: |
-          cat << 'EOF' > settings.gradle.kts
-          pluginManagement {
+          python3 - << 'PYEOF'
+          import os, shutil
+
+          base = "ResonanceBuild"
+          if os.path.exists(base):
+              shutil.rmtree(base)
+
+          files = {}
+
+          files["settings.gradle.kts"] = '''pluginManagement {
               repositories {
                   google()
                   mavenCentral()
@@ -43,11 +50,187 @@ jobs:
           }
           rootProject.name = "Resonance"
           include(":app")
-          EOF
-          gradle assembleDebug --no-daemon
+          '''
 
-      - name: Upload APK Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: Resonance-v2.0-debug-apk
-          path: ResonanceAndroid/app/build/outputs/apk/debug/app-debug.apk
+          files["gradle.properties"] = '''org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8
+          android.useAndroidX=true
+          kotlin.code.style=official
+          android.nonTransitiveRClass=true
+          '''
+
+          files["build.gradle.kts"] = '''plugins {
+              id("com.android.application") version "8.5.2" apply false
+              id("org.jetbrains.kotlin.android") version "1.9.24" apply false
+              id("com.google.devtools.ksp") version "1.9.24-1.0.20" apply false
+          }
+          '''
+
+          files["app/proguard-rules.pro"] = '''-keep class com.resonance.zhiji.data.db.** { *; }
+          -dontwarn kotlin.**
+          '''
+
+          files["app/build.gradle.kts"] = '''plugins {
+              id("com.android.application")
+              id("org.jetbrains.kotlin.android")
+              id("com.google.devtools.ksp")
+          }
+
+          android {
+              namespace = "com.resonance.zhiji"
+              compileSdk = 34
+
+              defaultConfig {
+                  applicationId = "com.resonance.zhiji"
+                  minSdk = 26
+                  targetSdk = 34
+                  versionCode = 200
+                  versionName = "2.0.0"
+              }
+
+              buildTypes {
+                  release {
+                      isMinifyEnabled = false
+                      proguardFiles(
+                          getDefaultProguardFile("proguard-android-optimize.txt"),
+                          "proguard-rules.pro"
+                      )
+                  }
+              }
+
+              compileOptions {
+                  sourceCompatibility = JavaVersion.VERSION_17
+                  targetCompatibility = JavaVersion.VERSION_17
+              }
+
+              kotlinOptions {
+                  jvmTarget = "17"
+              }
+
+              buildFeatures {
+                  compose = true
+              }
+
+              composeOptions {
+                  kotlinCompilerExtensionVersion = "1.5.14"
+              }
+          }
+
+          dependencies {
+              val composeBom = platform("androidx.compose:compose-bom:2024.06.00")
+              implementation(composeBom)
+              implementation("androidx.core:core-ktx:1.13.1")
+              implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.3")
+              implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.3")
+              implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.3")
+              implementation("androidx.activity:activity-compose:1.9.0")
+              implementation("androidx.compose.ui:ui")
+              implementation("androidx.compose.ui:ui-graphics")
+              implementation("androidx.compose.ui:ui-tooling-preview")
+              implementation("androidx.compose.material3:material3")
+
+              val roomVersion = "2.6.1"
+              implementation("androidx.room:room-runtime:$roomVersion")
+              implementation("androidx.room:room-ktx:$roomVersion")
+              ksp("androidx.room:room-compiler:$roomVersion")
+
+              implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
+          }
+          '''
+
+          files["app/src/main/AndroidManifest.xml"] = '''<?xml version="1.0" encoding="utf-8"?>
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+              <uses-permission android:name="android.permission.INTERNET" />
+              <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+              <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+              <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+              <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
+              <application
+                  android:allowBackup="false"
+                  android:icon="@android:drawable/sym_def_app_icon"
+                  android:roundIcon="@android:drawable/sym_def_app_icon"
+                  android:label="知己 Resonance"
+                  android:supportsRtl="true"
+                  android:theme="@android:style/Theme.Material.Light.NoActionBar">
+
+                  <activity
+                      android:name=".MainActivity"
+                      android:exported="true"
+                      android:windowSoftInputMode="adjustResize">
+                      <intent-filter>
+                          <action android:name="android.intent.action.MAIN" />
+                          <category android:name="android.intent.category.LAUNCHER" />
+                      </intent-filter>
+                  </activity>
+
+                  <receiver
+                      android:name=".service.ReminderAlarmReceiver"
+                      android:exported="false" />
+              </application>
+          </manifest>
+          '''
+
+          files["app/src/main/java/com/resonance/zhiji/data/db/Entities.kt"] = '''package com.resonance.zhiji.data.db
+
+          import androidx.room.Entity
+          import androidx.room.Index
+          import androidx.room.PrimaryKey
+          import java.util.UUID
+
+          @Entity(tableName = "chat_sessions")
+          data class ChatSessionEntity(
+              @PrimaryKey val id: String = UUID.randomUUID().toString(),
+              val title: String,
+              val providerProfileId: String? = null,
+              val createdAt: Long = System.currentTimeMillis(),
+              val updatedAt: Long = System.currentTimeMillis(),
+              val summaryText: String? = null,
+              val allowMemoryExtraction: Boolean = true
+          )
+
+          @Entity(tableName = "chat_messages", indices = [Index("sessionId"), Index("createdAt")])
+          data class ChatMessageEntity(
+              @PrimaryKey val id: String = UUID.randomUUID().toString(),
+              val sessionId: String,
+              val role: String,
+              val content: String,
+              val sequenceNumber: Int,
+              val createdAt: Long = System.currentTimeMillis(),
+              val tokenCount: Int = 0,
+              val referencedCardIdsJson: String = "[]"
+          )
+
+          @Entity(tableName = "cards", indices = [Index("contentType"), Index("createdAt"), Index("allowPostcardReview")])
+          data class CardEntity(
+              @PrimaryKey val id: String = UUID.randomUUID().toString(),
+              val rawContent: String,
+              val title: String? = null,
+              val contentType: String = "LIFE",
+              val createdAt: Long = System.currentTimeMillis(),
+              val updatedAt: Long = System.currentTimeMillis(),
+              val sourceType: String = "DIRECT_INPUT",
+              val sourceSessionId: String? = null,
+              val sourceMessageIdsJson: String = "[]",
+              val aiSupplementContent: String? = null,
+              val tagsCsv: String = "随手记",
+              val interventionLevel: String = "L0",
+              val aiSuggestionPrompt: String? = null,
+              val allowPostcardReview: Boolean = true,
+              val allowAiAccess: Boolean = true,
+              val isSensitive: Boolean = false,
+              val importanceScore: Int = 3,
+              val lastReviewedAt: Long? = null
+          )
+
+          @Entity(tableName = "card_drafts", indices = [Index("sessionId")])
+          data class CardDraftEntity(
+              @PrimaryKey val id: String = UUID.randomUUID().toString(),
+              val sessionId: String,
+              val sourceMessageIdsJson: String,
+              val proposedTitle: String,
+              val proposedContent: String,
+              val draftMode: String,
+              val suggestedTagsCsv: String = "对话提炼",
+              val status: String = "PENDING",
+              val createdAt: Long = System.currentTimeMillis()
